@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel Profesor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='Styles/Styles.css') }}">
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">🎓 Mi Sistema</div>
+    <nav class="sidebar-nav">
+        <a onclick="mostrar('inicio')" class="active" id="nav-inicio">🏠 Mi Panel</a>
+        <a onclick="mostrar('horario')" id="nav-horario">🗓️ Mi Horario</a>
+        <a onclick="mostrar('notas')" id="nav-notas">📝 Registrar Notas</a>
+        <a onclick="mostrar('notas-alumnos')" id="nav-notas-alumnos">📊 Notas de Alumnos</a>
+        <a onclick="mostrar('mis-estudiantes')" id="nav-mis-estudiantes">👥 Mis Estudiantes</a>
+        <div class="nav-spacer"></div>
+        <a href="/logout" class="danger">🚪 Cerrar sesión</a>
+    </nav>
+</aside>
+
+<div class="main-wrapper">
+    <header class="topbar">
+        <div></div>
+        <div class="topbar-user">
+            <div class="avatar">🖥</div>
+            {{ session['usuario'] }}
+        </div>
+    </header>
+
+    <main class="content">
+
+        <!-- INICIO -->
+        <div class="section active" id="sec-inicio">
+            <div class="page-header">
+                <h1>Bienvenido, {{ datos[0] if datos else session['usuario'] }}</h1>
+                <p>Panel de Profesor — Sistema de Gestión Académica</p>
+            </div>
+
+            {% if datos %}
+            <div class="card">
+                <h2>👤 Mi Información</h2>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>NOMBRES</label>
+                        <span>{{ datos[0] }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>APELLIDOS</label>
+                        <span>{{ datos[1] }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>CI</label>
+                        <span>{{ datos[2] }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>FECHA DE NACIMIENTO</label>
+                        <span>{{ datos[3] }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>📚 Materias que dicto</h2>
+                {% if materias %}
+                    {% for m in materias %}
+                    <span class="badge">{{ m[1] }}</span>
+                    {% endfor %}
+                {% else %}
+                <div class="placeholder">Aún no tienes materias asignadas.</div>
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="card" style="text-align:center; color: rgba(255,255,255,0.5); padding: 40px;">
+                No se encontraron datos del profesor.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- MI HORARIO -->
+        <div class="section" id="sec-horario">
+            <div class="page-header"><h1>Mi Horario</h1><p>Aulas, cursos y horarios asignados.</p></div>
+            <div class="card">
+                <h2>🗓️ Horario de Clases</h2>
+                {% if mi_horario %}
+                <table>
+                    <tr><th>Día</th><th>Hora Inicio</th><th>Hora Fin</th><th>Materia</th><th>Curso</th><th>Paralelo</th><th>Aula</th></tr>
+                    {% for h in mi_horario %}
+                    <tr>
+                        <td>{{ h[5] }}</td><td>{{ h[6] }}</td><td>{{ h[7] }}</td>
+                        <td>{{ h[1] }}</td><td>{{ h[3] }}</td><td>{{ h[4] }}</td><td>{{ h[2] }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                {% else %}
+                <div class="placeholder">No tienes horarios asignados todavía.</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- NOTAS DE ALUMNOS -->
+        <div class="section" id="sec-notas-alumnos">
+            <div class="page-header"><h1>Notas de Alumnos</h1><p>Calificaciones por estudiante y trimestre.</p></div>
+
+            {% if notas_por_estudiante %}
+            <div class="filter-row">
+                <input id="fn-buscar" type="text" placeholder="🔍 Buscar por nombre del estudiante..."
+                       oninput="filtrarPorEstudiante(this)" style="flex:1;">
+            </div>
+
+            {% for est_name, est_data in notas_por_estudiante.items() %}
+            <div class="card est-card" data-est="{{ est_name | lower }}">
+                <h2>👤 {{ est_name }}
+                    <span style="font-size:12px; color:rgba(255,255,255,0.5); font-weight:400;">
+                        — {{ est_data.curso }}, Paralelo {{ est_data.paralelo }}
+                    </span>
+                </h2>
+                {% for periodo, data in est_data.periodos.items() %}
+                <div class="periodo-blk-p" data-periodo="{{ periodo }}" style="margin-bottom:18px;">
+                    <div style="font-size:12px; color:#F7E8B4; font-weight:600; margin-bottom:8px; text-transform:uppercase; letter-spacing:.5px;">
+                        {{ periodo }}
+                        <span style="color:rgba(255,255,255,0.4); font-weight:400; font-size:11px;">(máx {{ data.peso }} pts)</span>
+                    </div>
+                    <table>
+                        <thead><tr><th>Evaluación</th><th>Nota</th></tr></thead>
+                        <tbody>
+                            {% for act_nom, nota_val in data.notas %}
+                            <tr>
+                                <td>{{ act_nom }}</td>
+                                <td>
+                                    {{ nota_val }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            <tr style="background:rgba(255,255,255,0.06);">
+                                <td style="color:rgba(255,255,255,0.6); font-style:italic;">Promedio trimestre</td>
+                                <td style="color:rgba(255,255,255,0.6); font-style:italic;">{{ data.promedio }}</td>
+                            </tr>
+                            <tr style="background:rgba(247,232,180,0.08);">
+                                <td style="color:#F7E8B4; font-weight:600;">Aporte al total</td>
+                                <td style="color:#F7E8B4; font-weight:600;">{{ data.contribucion }} / {{ data.peso }} pts</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                {% endfor %}
+                <div style="border-top:1px solid rgba(247,232,180,0.4); padding-top:12px; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="color:#F7E8B4; font-weight:700; font-size:14px;">⭐ Nota Final</span>
+                    <span style="color:#F7E8B4; font-weight:700; font-size:18px;">{{ est_data.nota_final }} / 100 pts</span>
+                </div>
+            </div>
+            {% endfor %}
+
+            {% else %}
+            <div class="card"><div class="placeholder">No hay notas registradas para tus materias aún.</div></div>
+            {% endif %}
+        </div>
+
+        <!-- MIS ESTUDIANTES -->
+        <!-- indices: [0]=id [1]=nombres [2]=apellidos [3]=ci [4]=fecha_nacimiento [5]=nombre_curso [6]=nombre_paralelo -->
+        <div class="section" id="sec-mis-estudiantes">
+            <div class="page-header"><h1>Mis Estudiantes</h1><p>Estudiantes del curso y paralelo que tienes asignado.</p></div>
+            <div class="card">
+                <h2>👥 Lista de Estudiantes</h2>
+                {% if mis_estudiantes %}
+                <table>
+                    <thead>
+                        <tr><th>Nombres</th><th>Apellidos</th><th>CI</th><th>Fecha Nac.</th><th>Curso</th><th>Paralelo</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for e in mis_estudiantes %}
+                        <tr>
+                            <td>{{ e[1] }}</td><td>{{ e[2] }}</td><td>{{ e[3] }}</td>
+                            <td>{{ e[4] }}</td><td>{{ e[5] }}</td><td>{{ e[6] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="placeholder">No tienes un curso/paralelo asignado o no hay estudiantes en él.</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- REGISTRAR NOTAS -->
+        <div class="section" id="sec-notas">
+            <div class="page-header"><h1>Registrar Notas</h1><p>Primero crea tus evaluaciones, luego asigna notas por estudiante.</p></div>
+
+            <!-- GESTIONAR EVALUACIONES -->
+            <div class="card">
+                <h2>📋 Gestionar Evaluaciones</h2>
+                <form method="POST" action="/profesor/crear_actividad">
+                    <div class="form-row">
+                        <input name="nombre_actividad" placeholder="Nombre (ej: Práctica 1, Examen Parcial)" required style="flex:2;">
+                        <select name="id_materia" required>
+                            <option value="" disabled selected>Materia</option>
+                            {% for m in materias %}<option value="{{ m[0] }}">{{ m[1] }}</option>{% endfor %}
+                        </select>
+                        <select name="id_tipo_evaluacion" required>
+                            <option value="" disabled selected>Tipo</option>
+                            {% for t in tipos_evaluacion %}<option value="{{ t[0] }}">{{ t[1] }}</option>{% endfor %}
+                        </select>
+                        <select name="periodo" required>
+                            <option value="" disabled selected>Trimestre</option>
+                            <option>1er Trimestre</option>
+                            <option>2do Trimestre</option>
+                            <option>3er Trimestre</option>
+                        </select>
+                        <button type="submit" class="btn btn-primary">Crear</button>
+                    </div>
+                </form>
+
+                {% if mis_actividades %}
+                {% for act in mis_actividades %}
+                <div style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:12px 14px;margin-top:12px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                        <div>
+                            <span style="font-weight:700;color:white;font-size:14px;">{{ act[1] }}</span>
+                            <span style="font-size:12px;color:rgba(255,255,255,0.55);margin-left:8px;">{{ act[2] }} · {{ act[3] }} · {{ act[4] }}</span>
+                        </div>
+                        <div style="display:flex;gap:6px;align-items:center;">
+                            <span style="font-size:12px;color:#F7E8B4;">
+                                {{ notas_por_actividad[act[0]]|length }} nota(s)
+                            </span>
+                            <button onclick="toggleNotas('act-{{ act[0] }}')"
+                                    style="background:rgba(255,255,255,0.18);color:white;border:none;border-radius:20px;padding:4px 12px;font-size:11px;cursor:pointer;">
+                                Ver notas
+                            </button>
+                            <a href="/profesor/eliminar_actividad/{{ act[0] }}"
+                               onclick="return confirm('¿Eliminar esta evaluación y sus notas?')"
+                               style="background:rgba(231,76,60,0.8);color:white;text-decoration:none;padding:4px 10px;border-radius:20px;font-size:11px;">
+                                Eliminar
+                            </a>
+                        </div>
+                    </div>
+
+                    <div id="act-{{ act[0] }}" style="display:none;margin-top:10px;">
+                        {% set notas_act = notas_por_actividad[act[0]] %}
+                        {% if notas_act %}
+                        <table>
+                            <thead>
+                                <tr><th>Estudiante</th><th>Nota</th><th></th></tr>
+                            </thead>
+                            <tbody>
+                                {% for n in notas_act %}
+                                <tr>
+                                    <td>{{ n[1] }}</td>
+                                    <td>{{ n[2] }}</td>
+                                    <td style="display:flex;gap:5px;flex-wrap:wrap;">
+                                        <button onclick="toggleEditNota({{ n[0] }})"
+                                                style="background:rgba(255,193,7,0.85);color:black;border:none;border-radius:14px;padding:3px 8px;font-size:11px;cursor:pointer;">
+                                            Editar
+                                        </button>
+                                        <a href="/profesor/eliminar_nota/{{ n[0] }}"
+                                           onclick="return confirm('¿Eliminar esta nota?')"
+                                           style="background:rgba(231,76,60,0.7);color:white;text-decoration:none;padding:3px 8px;border-radius:14px;font-size:11px;">
+                                            Eliminar
+                                        </a>
+                                    </td>
+                                </tr>
+                                <tr id="edit-nota-{{ n[0] }}" style="display:none;background:rgba(255,255,255,0.05);">
+                                    <td colspan="3">
+                                        <form method="POST" action="/profesor/editar_nota/{{ n[0] }}"
+                                              style="display:flex;gap:8px;align-items:center;padding:4px 0;">
+                                            <span style="font-size:12px;color:rgba(255,255,255,0.7);">Nueva nota:</span>
+                                            <input type="number" step="0.01" min="0" max="100" name="nota"
+                                                   value="{{ n[2] }}" required
+                                                   style="background:rgba(255,255,255,0.25);border:none;border-radius:8px;padding:5px 10px;color:white;width:90px;font-size:13px;">
+                                            <button type="submit"
+                                                    style="background:white;color:black;border:none;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:bold;cursor:pointer;">
+                                                Guardar
+                                            </button>
+                                            <button type="button" onclick="toggleEditNota({{ n[0] }})"
+                                                    style="background:rgba(255,255,255,0.2);color:white;border:none;border-radius:20px;padding:5px 10px;font-size:12px;cursor:pointer;">
+                                                Cancelar
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <div style="color:rgba(255,255,255,0.4);font-size:13px;padding:4px 0;">Sin notas registradas aún.</div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="placeholder" style="padding:20px 0 0;">Aún no has creado evaluaciones.</div>
+                {% endif %}
+            </div>
+
+            <!-- REGISTRAR NOTA A UN ESTUDIANTE -->
+            <div class="card">
+                <h2>📝 Registrar Nota</h2>
+                {% if mis_actividades %}
+                <form method="POST" action="/profesor/registrar_nota">
+                    <div class="form-row">
+                        <select name="id_actividad" required style="flex:2;">
+                            <option value="" disabled selected>Evaluación</option>
+                            {% for act in mis_actividades %}
+                            <option value="{{ act[0] }}">{{ act[1] }} — {{ act[2] }} ({{ act[4] }})</option>
+                            {% endfor %}
+                        </select>
+                        <select name="id_estudiante" required style="flex:2;">
+                            <option value="" disabled selected>Estudiante</option>
+                            {% for e in estudiantes %}<option value="{{ e[0] }}">{{ e[1] }} {{ e[2] }} ({{ e[5] }} {{ e[6] }})</option>{% endfor %}
+                        </select>
+                        <input type="number" step="0.01" min="0" max="100" name="nota" placeholder="Nota (0–100)" required>
+                        <button type="submit" class="btn btn-primary">Registrar</button>
+                    </div>
+                </form>
+                {% else %}
+                <div class="placeholder">Crea al menos una evaluación antes de registrar notas.</div>
+                {% endif %}
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<script src="{{ url_for('static', filename='Scripts/profesor.js') }}"></script>
+
+</body>
+</html>

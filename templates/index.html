@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Mi Sistema Académico</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='Styles/Styles.css') }}">
+</head>
+<body class="login-page">
+
+<div class="login-card">
+    <div class="login-brand">
+        <img src="{{ url_for('static', filename='img/logo_colegio_login.png') }}" alt="Logo">
+        <h1>🎓 Mi Sistema</h1>
+        <p>Sistema de Gestión Académica</p>
+    </div>
+
+    {% if error %}
+    <div class="login-error">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="/login">
+        <div class="form-group">
+            <label>USUARIO</label>
+            <input type="text" name="username" placeholder="Usuario o CI" required autofocus>
+        </div>
+        <div class="form-group">
+            <label>CONTRASEÑA</label>
+            <input type="password" name="password" placeholder="Contraseña" required>
+        </div>
+        <button type="submit" class="btn-login">Iniciar Sesión</button>
+    </form>
+
+    <div class="login-footer">© 2026 Mi Sistema Académico</div>
+</div>
+
+</body>
+</html>

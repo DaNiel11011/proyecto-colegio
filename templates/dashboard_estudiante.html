@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel Estudiante</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='Styles/Styles.css') }}">
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">🎓 Mi Sistema</div>
+    <nav class="sidebar-nav">
+        <a onclick="mostrar('panel')" class="active" id="nav-panel">🏠 Mi Panel</a>
+        <a onclick="mostrar('horario')" id="nav-horario">🗓️ Mi Horario</a>
+        <a onclick="mostrar('notas')" id="nav-notas">📝 Mis Notas</a>
+        <div class="nav-spacer"></div>
+        <a href="/logout" class="danger">🚪 Cerrar sesión</a>
+    </nav>
+</aside>
+
+<div class="main-wrapper">
+    <header class="topbar">
+        <div></div>
+        <div class="topbar-user">
+            <div class="avatar">👤</div>
+            {{ session['usuario'] }}
+        </div>
+    </header>
+
+    <main class="content">
+
+        <!-- MI PANEL -->
+        <div class="section active" id="sec-panel">
+            <div class="page-header">
+                <h1>Bienvenido, {{ datos[0] if datos else session['usuario'] }}</h1>
+                <p>Panel de Estudiante — Sistema de Gestión Académica</p>
+            </div>
+
+            {% if datos %}
+            <div class="card">
+                <h2>👤 Mi Información</h2>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>NOMBRES</label>
+                        <span>{{ datos[0] }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>APELLIDOS</label>
+                        <span>{{ datos[1] }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>CI</label>
+                        <span>{{ datos[2] }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>FECHA DE NACIMIENTO</label>
+                        <span>{{ datos[3] }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🎒 Mi Curso y Paralelo</h2>
+                <span class="badge">📚 {{ datos[4] }}</span>
+                <span class="badge">🔤 Paralelo {{ datos[5] }}</span>
+            </div>
+            {% else %}
+            <div class="card" style="text-align:center; color: rgba(255,255,255,0.5); padding: 40px;">
+                No se encontraron datos del estudiante.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- MI HORARIO -->
+        <div class="section" id="sec-horario">
+            <div class="page-header"><h1>Mi Horario</h1><p>Clases asignadas a tu curso y paralelo.</p></div>
+            <div class="card">
+                <h2>🗓️ Horario de Clases</h2>
+                {% if mi_horario %}
+                <table>
+                    <tr><th>Día</th><th>Hora Inicio</th><th>Hora Fin</th><th>Materia</th><th>Aula</th><th>Profesor</th></tr>
+                    {% for h in mi_horario %}
+                    <tr>
+                        <td>{{ h[0] }}</td><td>{{ h[1] }}</td><td>{{ h[2] }}</td>
+                        <td>{{ h[3] }}</td><td>{{ h[4] }}</td><td>{{ h[5] }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                {% else %}
+                <div style="text-align:center; padding: 30px; color: rgba(255,255,255,0.5);">No hay horarios asignados a tu curso todavía.</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- MIS NOTAS -->
+        <div class="section" id="sec-notas">
+            <div class="page-header"><h1>Mis Notas</h1><p>Calificaciones por materia y trimestre.</p></div>
+
+            {% if notas_por_materia %}
+
+            {% for materia, mat_data in notas_por_materia.items() %}
+            <div class="card">
+                <h2>📘 {{ materia }}</h2>
+                {% for periodo, data in mat_data.periodos.items() %}
+                <div class="periodo-blk" data-periodo="{{ periodo }}" style="margin-bottom:18px;">
+                    <div style="font-size:12px; color:#F7E8B4; font-weight:600; margin-bottom:8px; text-transform:uppercase; letter-spacing:.5px;">
+                        {{ periodo }}
+                        <span style="color:rgba(255,255,255,0.4); font-weight:400; font-size:11px;">(máx {{ data.peso }} pts)</span>
+                    </div>
+                    <table>
+                        <thead><tr><th>Evaluación</th><th>Nota</th></tr></thead>
+                        <tbody>
+                            {% for act_nom, nota_val in data.notas %}
+                            <tr>
+                                <td>{{ act_nom }}</td>
+                                <td>
+                                    {{ nota_val }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            <tr style="background:rgba(255,255,255,0.06);">
+                                <td style="color:rgba(255,255,255,0.6); font-style:italic;">Promedio trimestre</td>
+                                <td style="color:rgba(255,255,255,0.6); font-style:italic;">{{ data.promedio }}</td>
+                            </tr>
+                            <tr style="background:rgba(247,232,180,0.08);">
+                                <td style="color:#F7E8B4; font-weight:600;">Aporte al total</td>
+                                <td style="color:#F7E8B4; font-weight:600;">{{ data.contribucion }} / {{ data.peso }} pts</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                {% endfor %}
+                <div style="border-top:1px solid rgba(247,232,180,0.4); padding-top:12px; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="color:#F7E8B4; font-weight:700; font-size:14px;">⭐ Nota Final</span>
+                    <span style="color:#F7E8B4; font-weight:700; font-size:18px;">{{ mat_data.nota_final }} / 100 pts</span>
+                </div>
+            </div>
+            {% endfor %}
+
+            {% else %}
+            <div class="card" style="text-align:center; color:rgba(255,255,255,0.5); padding:40px;">
+                Aún no tienes notas registradas.
+            </div>
+            {% endif %}
+        </div>
+
+    </main>
+</div>
+
+<script src="{{ url_for('static', filename='Scripts/estudiante.js') }}"></script>
+
+</body>
+</html>

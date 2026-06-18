@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel Administrativo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='Styles/Styles.css') }}">
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">🎓 Mi Sistema</div>
+    <nav class="sidebar-nav">
+        <a class="active">🏠 Mi Panel</a>
+        <div class="nav-spacer"></div>
+        <a href="/logout" class="danger">🚪 Cerrar sesión</a>
+    </nav>
+</aside>
+
+<div class="main-wrapper">
+    <header class="topbar">
+        <div></div>
+        <div class="topbar-user">
+            <div class="avatar">👥</div>
+            {{ session['usuario'] }}
+        </div>
+    </header>
+
+    <main class="content">
+        <div class="page-header">
+            <h1>Bienvenido, {{ datos[0] if datos else session['usuario'] }}</h1>
+            <p>Panel Administrativo — Sistema de Gestión Académica</p>
+        </div>
+
+        {% if datos %}
+        <div class="card">
+            <h2>👤 Mi Información</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>NOMBRES</label>
+                    <span>{{ datos[0] }}</span>
+                </div>
+                <div class="info-item">
+                    <label>APELLIDOS</label>
+                    <span>{{ datos[1] }}</span>
+                </div>
+                <div class="info-item">
+                    <label>CI</label>
+                    <span>{{ datos[2] }}</span>
+                </div>
+                <div class="info-item">
+                    <label>CARGO</label>
+                    <span><span class="badge">{{ datos[3] or 'Sin cargo' }}</span></span>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="card" style="text-align:center; color: rgba(255,255,255,0.5); padding: 40px;">
+            No se encontraron datos del personal administrativo.
+        </div>
+        {% endif %}
+    </main>
+</div>
+
+</body>
+</html>

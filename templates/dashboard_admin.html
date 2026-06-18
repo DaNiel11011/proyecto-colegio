@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel Administrador</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='Styles/Styles.css') }}">
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+    <div class="sidebar-brand">🎓 Mi Sistema</div>
+    <nav class="sidebar-nav">
+        <a onclick="mostrar('inicio')" class="active" id="nav-inicio">🏠 Inicio</a>
+        <a onclick="mostrar('profesores')" id="nav-profesores">🖥 Profesores</a>
+        <a onclick="mostrar('estudiantes')" id="nav-estudiantes">👤 Estudiantes</a>
+        {% if es_admin %}<a onclick="mostrar('administrativos')" id="nav-administrativos">👥 Administrativos</a>{% endif %}
+        <a onclick="mostrar('materias')" id="nav-materias">📚 Materias</a>
+        <a onclick="mostrar('aulas')" id="nav-aulas">🏫 Aulas</a>
+        <a onclick="mostrar('horarios')" id="nav-horarios">🗓️ Horarios</a>
+        <a onclick="mostrar('notas')" id="nav-notas">📝 Notas</a>
+        <a onclick="mostrar('settings')" id="nav-settings">⚙️ Settings</a>
+        <div class="nav-spacer"></div>
+        <a href="/logout" class="danger">🚪 Cerrar sesión</a>
+    </nav>
+</aside>
+
+<!-- MAIN -->
+<div class="main-wrapper">
+    <header class="topbar">
+        <button class="hamburger">☰</button>
+        <div class="topbar-user">
+            <div class="avatar">👤</div>
+            {{ session['usuario'] }}
+        </div>
+    </header>
+
+    <main class="content">
+
+        <!-- INICIO -->
+        <div class="section active" id="sec-inicio">
+            <div class="page-header">
+                <h1>Inicio</h1>
+                <p>Resumen general del sistema académico.</p>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-label">Estudiantes</div><div class="stat-value">{{ total_estudiantes }}</div></div>
+                <div class="stat-card"><div class="stat-label">Profesores</div><div class="stat-value">{{ total_profesores }}</div></div>
+                <div class="stat-card"><div class="stat-label">Materias</div><div class="stat-value">{{ total_materias }}</div></div>
+                <div class="stat-card"><div class="stat-label">Administrativos</div><div class="stat-value">{{ total_admin }}</div></div>
+                <div class="stat-card"><div class="stat-label">Aulas</div><div class="stat-value">{{ total_aulas }}</div></div>
+                <div class="stat-card"><div class="stat-label">Horarios</div><div class="stat-value">{{ total_horarios }}</div></div>
+                <div class="stat-card"><div class="stat-label">Notas</div><div class="stat-value">{{ total_notas }}</div></div>
+            </div>
+        </div>
+
+        <!-- PROFESORES -->
+        <div class="section" id="sec-profesores">
+            <div class="page-header"><h1>Profesores</h1><p>Gestión de profesores del sistema.</p></div>
+
+            <div class="card">
+                <h2>➕ Añadir Profesor</h2>
+                <form method="POST" action="/crear_profesor">
+                    <div class="form-row">
+                        <input name="nombres" placeholder="Nombres" required>
+                        <input name="apellidos" placeholder="Apellidos" required>
+                        <input name="ci" placeholder="CI" required>
+                        <input type="date" name="fecha_nacimiento" required>
+                        <select name="id_materia" required>
+                            <option disabled selected>Materia</option>
+                            {% for m in materias %}<option value="{{ m[0] }}">{{ m[1] }}</option>{% endfor %}
+                        </select>
+                        <select name="id_curso">
+                            <option value="">Curso (opcional)</option>
+                            {% for c in cursos %}<option value="{{ c[0] }}">{{ c[1] }}</option>{% endfor %}
+                        </select>
+                        <select name="id_paralelo">
+                            <option value="">Paralelo (opcional)</option>
+                            {% for p in paralelos %}<option value="{{ p[0] }}">{{ p[1] }}</option>{% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-primary">Añadir</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>📋 Lista de Profesores</h2>
+                <input class="search-bar" placeholder="🔍 Buscar profesor..." oninput="buscar(this,'tabla-profesores')">
+                <div class="edit-panel" id="edit-panel-profesor">
+                    <h3>✏️ Editar Profesor</h3>
+                    <form method="POST" id="form-edit-profesor">
+                        <div class="form-row">
+                            <input name="nombres" id="ep-nombres" placeholder="Nombres" required>
+                            <input name="apellidos" id="ep-apellidos" placeholder="Apellidos" required>
+                            <input type="date" name="fecha_nacimiento" id="ep-fecha" required>
+                            <select name="id_materia" id="ep-materia" required>
+                                {% for m in materias %}<option value="{{ m[0] }}">{{ m[1] }}</option>{% endfor %}
+                            </select>
+                            <select name="id_curso" id="ep-curso">
+                                <option value="">Sin curso</option>
+                                {% for c in cursos %}<option value="{{ c[0] }}">{{ c[1] }}</option>{% endfor %}
+                            </select>
+                            <select name="id_paralelo" id="ep-paralelo">
+                                <option value="">Sin paralelo</option>
+                                {% for p in paralelos %}<option value="{{ p[0] }}">{{ p[1] }}</option>{% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-primary">Guardar</button>
+                            <button type="button" class="btn btn-cancel" onclick="cerrarEdit('edit-panel-profesor')">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+                <table id="tabla-profesores">
+                    <tr><th>ID</th><th>Nombres</th><th>Apellidos</th><th>CI</th><th>Materia</th><th>Curso</th><th>Paralelo</th><th>Acciones</th></tr>
+                    {% for p in profesores %}
+                    <tr>
+                        <td>{{ p[0] }}</td><td>{{ p[1] }}</td><td>{{ p[2] }}</td>
+                        <td>{{ p[3] }}</td><td>{{ p[5] or '—' }}</td>
+                        <td>{{ p[10] or '—' }}</td><td>{{ p[8] or '—' }}</td>
+                        <td><div class="acciones">
+                            <button class="btn-warning"
+                                data-id="{{ p[0] }}" data-nombres="{{ p[1] }}" data-apellidos="{{ p[2] }}"
+                                data-fecha="{{ p[4] }}" data-materia="{{ p[6] }}" data-paralelo="{{ p[9] }}"
+                                data-curso="{{ p[11] }}"
+                                onclick="editProfesorBtn(this)">Editar</button>
+                            <a class="btn-danger-sm" href="/eliminar_profesor/{{ p[0] }}" onclick="return confirm('¿Eliminar este profesor?')">Eliminar</a>
+                        </div></td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+
+        </div>
+
+        <!-- ESTUDIANTES -->
+        <div class="section" id="sec-estudiantes">
+            <div class="page-header"><h1>Estudiantes</h1><p>Gestión de estudiantes del sistema.</p></div>
+
+            <div class="card">
+                <h2>➕ Añadir Estudiante</h2>
+                <form method="POST" action="/crear_estudiante">
+                    <div class="form-row">
+                        <input name="nombres" placeholder="Nombres" required>
+                        <input name="apellidos" placeholder="Apellidos" required>
+                        <input name="ci" placeholder="CI" required>
+                        <input type="date" name="fecha_nacimiento" required>
+                        <select name="curso" required>
+                            <option disabled selected>Curso</option>
+                            {% for c in cursos %}<option value="{{ c[0] }}">{{ c[1] }}</option>{% endfor %}
+                        </select>
+                        <select name="paralelo" required>
+                            <option disabled selected>Paralelo</option>
+                            {% for p in paralelos %}<option value="{{ p[0] }}">{{ p[1] }}</option>{% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-primary">Añadir</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>📋 Lista de Estudiantes</h2>
+                <input class="search-bar" placeholder="🔍 Buscar estudiante..." oninput="buscar(this,'tabla-estudiantes')">
+                <div class="edit-panel" id="edit-panel-estudiante">
+                    <h3>✏️ Editar Estudiante</h3>
+                    <form method="POST" id="form-edit-estudiante">
+                        <div class="form-row">
+                            <input name="nombres" id="ee-nombres" placeholder="Nombres" required>
+                            <input name="apellidos" id="ee-apellidos" placeholder="Apellidos" required>
+                            <input type="date" name="fecha_nacimiento" id="ee-fecha" required>
+                            <select name="curso" id="ee-curso" required>
+                                {% for c in cursos %}<option value="{{ c[0] }}">{{ c[1] }}</option>{% endfor %}
+                            </select>
+                            <select name="paralelo" id="ee-paralelo" required>
+                                {% for p in paralelos %}<option value="{{ p[0] }}">{{ p[1] }}</option>{% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-primary">Guardar</button>
+                            <button type="button" class="btn btn-cancel" onclick="cerrarEdit('edit-panel-estudiante')">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+                <table id="tabla-estudiantes">
+                    <tr><th>ID</th><th>Nombres</th><th>Apellidos</th><th>CI</th><th>Fecha Nac.</th><th>Curso</th><th>Paralelo</th><th>Acciones</th></tr>
+                    {% for e in estudiantes %}
+                    <tr>
+                        <td>{{ e[0] }}</td><td>{{ e[1] }}</td><td>{{ e[2] }}</td>
+                        <td>{{ e[3] }}</td><td>{{ e[4] }}</td><td>{{ e[5] }}</td><td>{{ e[6] }}</td>
+                        <td><div class="acciones">
+                            <button class="btn-warning" onclick="editEstudiante({{ e[0] }},'{{ e[1] }}','{{ e[2] }}','{{ e[4] }}',{{ e[7] }},{{ e[8] }})">Editar</button>
+                            <a class="btn-danger-sm" href="/eliminar_estudiante/{{ e[0] }}" onclick="return confirm('¿Eliminar este estudiante?')">Eliminar</a>
+                        </div></td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+
+        <!-- ADMINISTRATIVOS (solo visible para ADMIN) -->
+        {% if es_admin %}
+        <div class="section" id="sec-administrativos">
+            <div class="page-header"><h1>Administrativos</h1><p>Gestión del personal administrativo.</p></div>
+
+            <div class="card">
+                <h2>➕ Añadir Administrativo</h2>
+                <form method="POST" action="/crear_administrativo">
+                    <div class="form-row">
+                        <input name="nombres" placeholder="Nombres" required>
+                        <input name="apellidos" placeholder="Apellidos" required>
+                        <input name="ci" placeholder="CI" required>
+                        <input name="cargo" placeholder="Cargo" required>
+                        <button type="submit" class="btn btn-primary">Añadir</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>📋 Lista de Administrativos</h2>
+                <input class="search-bar" placeholder="🔍 Buscar administrativo..." oninput="buscar(this,'tabla-admin')">
+                <div class="edit-panel" id="edit-panel-admin">
+                    <h3>✏️ Editar Administrativo</h3>
+                    <form method="POST" id="form-edit-admin">
+                        <div class="form-row">
+                            <input name="nombres" id="ea-nombres" placeholder="Nombres" required>
+                            <input name="apellidos" id="ea-apellidos" placeholder="Apellidos" required>
+                            <input name="ci" id="ea-ci" placeholder="CI" required>
+                            <input name="cargo" id="ea-cargo" placeholder="Cargo" required>
+                            <button type="submit" class="btn btn-primary">Guardar</button>
+                            <button type="button" class="btn btn-cancel" onclick="cerrarEdit('edit-panel-admin')">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+                <table id="tabla-admin">
+                    <tr><th>ID</th><th>Nombres</th><th>Apellidos</th><th>CI</th><th>Cargo</th><th>Acciones</th></tr>
+                    {% for a in administrativos %}
+                    <tr>
+                        <td>{{ a[0] }}</td><td>{{ a[1] }}</td><td>{{ a[2] }}</td><td>{{ a[3] }}</td><td>{{ a[4] }}</td>
+                        <td><div class="acciones">
+                            <button class="btn-warning" onclick="editAdmin({{ a[0] }},'{{ a[1] }}','{{ a[2] }}','{{ a[3] }}','{{ a[4] }}')">Editar</button>
+                            <a class="btn-danger-sm" href="/eliminar_administrativo/{{ a[0] }}" onclick="return confirm('¿Eliminar este registro?')">Eliminar</a>
+                        </div></td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- MATERIAS -->
+        <div class="section" id="sec-materias">
+            <div class="page-header"><h1>Materias</h1><p>Gestión de materias académicas.</p></div>
+
+            <div class="card">
+                <h2>➕ Añadir Materia</h2>
+                <form method="POST" action="/crear_materia">
+                    <div class="form-row">
+                        <input name="nombre_materia" placeholder="Nombre de la materia" required>
+                        <button type="submit" class="btn btn-primary">Añadir</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>📋 Lista de Materias</h2>
+                <input class="search-bar" placeholder="🔍 Buscar materia..." oninput="buscar(this,'tabla-materias')">
+                <div class="edit-panel" id="edit-panel-materia">
+                    <h3>✏️ Editar Materia</h3>
+                    <form method="POST" id="form-edit-materia">
+                        <div class="form-row">
+                            <input name="nombre_materia" id="em-nombre" placeholder="Nombre de la materia" required>
+                            <button type="submit" class="btn btn-primary">Guardar</button>
+                            <button type="button" class="btn btn-cancel" onclick="cerrarEdit('edit-panel-materia')">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+                <table id="tabla-materias">
+                    <tr><th>ID</th><th>Nombre Materia</th><th>Acciones</th></tr>
+                    {% for m in materias %}
+                    <tr>
+                        <td>{{ m[0] }}</td><td>{{ m[1] }}</td>
+                        <td><div class="acciones">
+                            <button class="btn-warning" onclick="editMateria({{ m[0] }},'{{ m[1] }}')">Editar</button>
+                            <a class="btn-danger-sm" href="/eliminar_materia/{{ m[0] }}" onclick="return confirm('¿Eliminar esta materia?')">Eliminar</a>
+                        </div></td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+
+        <!-- AULAS -->
+        <div class="section" id="sec-aulas">
+            <div class="page-header"><h1>Aulas</h1><p>Gestión de aulas y espacios físicos.</p></div>
+
+            <div class="card">
+                <h2>➕ Añadir Aula</h2>
+                <form method="POST" action="/crear_aula">
+                    <div class="form-row">
+                        <input name="nombre_aula" placeholder="Nombre del aula" required>
+                        <input name="capacidad" type="number" placeholder="Capacidad (alumnos)">
+                        <input name="tipo" placeholder="Tipo (ej: Laboratorio)">
+                        <button type="submit" class="btn btn-primary">Añadir</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>📋 Lista de Aulas</h2>
+                <input class="search-bar" placeholder="🔍 Buscar aula..." oninput="buscar(this,'tabla-aulas')">
+                <div class="edit-panel" id="edit-panel-aula">
+                    <h3>✏️ Editar Aula</h3>
+                    <form method="POST" id="form-edit-aula">
+                        <div class="form-row">
+                            <input name="nombre_aula" id="eau-nombre" placeholder="Nombre del aula" required>
+                            <input name="capacidad" id="eau-capacidad" type="number" placeholder="Capacidad">
+                            <input name="tipo" id="eau-tipo" placeholder="Tipo">
+                            <button type="submit" class="btn btn-primary">Guardar</button>
+                            <button type="button" class="btn btn-cancel" onclick="cerrarEdit('edit-panel-aula')">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+                <table id="tabla-aulas">
+                    <tr><th>ID</th><th>Nombre Aula</th><th>Capacidad</th><th>Tipo</th><th>Acciones</th></tr>
+                    {% for au in aulas %}
+                    <tr>
+                        <td>{{ au[0] }}</td><td>{{ au[1] }}</td><td>{{ au[2] or '-' }}</td><td>{{ au[3] or '-' }}</td>
+                        <td><div class="acciones">
+                            <button class="btn-warning" onclick="editAula({{ au[0] }},'{{ au[1] }}',{{ au[2] or 0 }},'{{ au[3] or '' }}')">Editar</button>
+                            <a class="btn-danger-sm" href="/eliminar_aula/{{ au[0] }}" onclick="return confirm('¿Eliminar esta aula?')">Eliminar</a>
+                        </div></td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+
+        <!-- HORARIOS -->
+        <div class="section" id="sec-horarios">
+            <div class="page-header"><h1>Horarios</h1><p>Asignación de profesores, materias, aulas, cursos y paralelos.</p></div>
+
+            <div id="alerta-conflicto" style="display:none; background:rgba(231,76,60,0.7); color:white; padding:10px 16px; border-radius:10px; margin-bottom:14px;">
+                ⚠️ <strong>Conflicto de horario:</strong> El aula ya está ocupada en ese día y franja horaria.
+            </div>
+
+            <div class="card">
+                <h2>➕ Añadir Horario</h2>
+                <form method="POST" action="/crear_horario">
+                    <div class="form-row">
+                        <select name="id_profesor" id="nh-profesor" required onchange="autocompletarHorario(this)">
+                            <option disabled selected>Profesor</option>
+                            {% for p in profesores %}<option value="{{ p[0] }}" data-materia="{{ p[6] or '' }}" data-curso="{{ p[11] or '' }}" data-paralelo="{{ p[9] or '' }}">{{ p[1] }} {{ p[2] }}</option>{% endfor %}
+                        </select>
+                        <select name="id_materia" id="nh-materia" required>
+                            <option disabled selected>Materia</option>
+                            {% for m in materias %}<option value="{{ m[0] }}">{{ m[1] }}</option>{% endfor %}
+                        </select>
+                        <select name="id_aula" required>
+                            <option disabled selected>Aula</option>
+                            {% for au in aulas %}<option value="{{ au[0] }}">{{ au[1] }}</option>{% endfor %}
+                        </select>
+                        <select name="id_curso" id="nh-curso" required>
+                            <option disabled selected>Curso</option>
+                            {% for c in cursos %}<option value="{{ c[0] }}">{{ c[1] }}</option>{% endfor %}
+                        </select>
+                        <select name="id_paralelo" id="nh-paralelo" required>
+                            <option disabled selected>Paralelo</option>
+                            {% for p in paralelos %}<option value="{{ p[0] }}">{{ p[1] }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <select name="dia" required>
+                            <option disabled selected>Día</option>
+                            <option>Lunes</option><option>Martes</option><option>Miercoles</option>
+                            <option>Jueves</option><option>Viernes</option><option>Sabado</option>
+                        </select>
+                        <input type="time" name="hora_inicio" required>
+                        <input type="time" name="hora_fin" required>
+                        <button type="submit" class="btn btn-primary">Añadir</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>📋 Lista de Horarios</h2>
+                <input class="search-bar" placeholder="🔍 Buscar horario..." oninput="buscar(this,'tabla-horarios')">
+                <div class="edit-panel" id="edit-panel-horario">
+                    <h3>✏️ Editar Horario</h3>
+                    <form method="POST" id="form-edit-horario">
+                        <div class="form-row">
+                            <select name="id_profesor" id="eh-profesor" required>
+                                {% for p in profesores %}<option value="{{ p[0] }}">{{ p[1] }} {{ p[2] }}</option>{% endfor %}
+                            </select>
+                            <select name="id_materia" id="eh-materia" required>
+                                {% for m in materias %}<option value="{{ m[0] }}">{{ m[1] }}</option>{% endfor %}
+                            </select>
+                            <select name="id_aula" id="eh-aula" required>
+                                {% for au in aulas %}<option value="{{ au[0] }}">{{ au[1] }}</option>{% endfor %}
+                            </select>
+                            <select name="id_curso" id="eh-curso" required>
+                                {% for c in cursos %}<option value="{{ c[0] }}">{{ c[1] }}</option>{% endfor %}
+                            </select>
+                            <select name="id_paralelo" id="eh-paralelo" required>
+                                {% for p in paralelos %}<option value="{{ p[0] }}">{{ p[1] }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <select name="dia" id="eh-dia" required>
+                                <option>Lunes</option><option>Martes</option><option>Miercoles</option>
+                                <option>Jueves</option><option>Viernes</option><option>Sabado</option>
+                            </select>
+                            <input type="time" name="hora_inicio" id="eh-hora-inicio" required>
+                            <input type="time" name="hora_fin" id="eh-hora-fin" required>
+                            <button type="submit" class="btn btn-primary">Guardar</button>
+                            <button type="button" class="btn btn-cancel" onclick="cerrarEdit('edit-panel-horario')">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+                <table id="tabla-horarios">
+                    <tr><th>Profesor</th><th>Materia</th><th>Aula</th><th>Curso</th><th>Paralelo</th><th>Día</th><th>Inicio</th><th>Fin</th><th>Acciones</th></tr>
+                    {% for h in horarios %}
+                    <tr>
+                        <td>{{ h[1] }}</td><td>{{ h[2] }}</td><td>{{ h[3] }}</td>
+                        <td>{{ h[4] }}</td><td>{{ h[5] }}</td><td>{{ h[6] }}</td>
+                        <td>{{ h[7] }}</td><td>{{ h[8] }}</td>
+                        <td><div class="acciones">
+                            <button class="btn-warning" onclick="editHorario({{ h[0] }},{{ h[9] }},{{ h[10] }},{{ h[11] }},{{ h[12] }},{{ h[13] }},'{{ h[6] }}','{{ h[7] }}','{{ h[8] }}')">Editar</button>
+                            <a class="btn-danger-sm" href="/eliminar_horario/{{ h[0] }}" onclick="return confirm('¿Eliminar este horario?')">Eliminar</a>
+                        </div></td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+
+        <!-- NOTAS -->
+        <div class="section" id="sec-notas">
+            <div class="page-header"><h1>Notas</h1><p>Resumen de calificaciones por estudiante y materia.</p></div>
+
+            <div class="card">
+                <input class="search-bar" id="buscar-est-nota"
+                       placeholder="🔍 Buscar por nombre del estudiante..."
+                       oninput="filtrarEstNotas(this)">
+            </div>
+
+            {% for est, mats in tabla_notas.items() %}
+            <div class="card est-nota-card" data-est="{{ est | lower }}">
+                <h2 style="margin-bottom:14px;">👤 {{ est }}</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Asignatura</th>
+                            <th>
+                                1er Trimestre
+                                <div style="font-size:11px;color:rgba(255,255,255,0.45);font-weight:400;">30 pts</div>
+                            </th>
+                            <th>
+                                2do Trimestre
+                                <div style="font-size:11px;color:rgba(255,255,255,0.45);font-weight:400;">30 pts</div>
+                            </th>
+                            <th>
+                                3er Trimestre
+                                <div style="font-size:11px;color:rgba(255,255,255,0.45);font-weight:400;">40 pts</div>
+                            </th>
+                            <th>Nota Final</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for mat, d in mats.items() %}
+                        <tr>
+                            <td>{{ mat }}</td>
+                            <td>{{ d.trim1 }}</td>
+                            <td>{{ d.trim2 }}</td>
+                            <td>{{ d.trim3 }}</td>
+                            <td style="font-weight:700; color:#F7E8B4;">{{ d.nota_final }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="card"><div class="placeholder">No hay notas registradas en el sistema.</div></div>
+            {% endfor %}
+        </div>
+
+        <!-- SETTINGS (Cursos y Paralelos) -->
+        <div class="section" id="sec-settings">
+            <div class="page-header"><h1>Settings</h1><p>Configuración de cursos y paralelos.</p></div>
+
+            <!-- CURSOS -->
+            <div class="card">
+                <h2>➕ Añadir Curso</h2>
+                <form method="POST" action="/crear_curso">
+                    <div class="form-row">
+                        <input name="nombre_curso" placeholder="Nombre del curso (ej: 1ro Bachillerato)" required>
+                        <button type="submit" class="btn btn-primary">Añadir</button>
+                    </div>
+                </form>
+            </div>
+            <div class="card">
+                <h2>📋 Cursos</h2>
+                <div class="edit-panel" id="edit-panel-curso">
+                    <h3>✏️ Editar Curso</h3>
+                    <form method="POST" id="form-edit-curso">
+                        <div class="form-row">
+                            <input name="nombre_curso" id="ec-nombre" placeholder="Nombre del curso" required>
+                            <button type="submit" class="btn btn-primary">Guardar</button>
+                            <button type="button" class="btn btn-cancel" onclick="cerrarEdit('edit-panel-curso')">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+                <table>
+                    <tr><th>ID</th><th>Curso</th><th>Acciones</th></tr>
+                    {% for c in cursos %}
+                    <tr>
+                        <td>{{ c[0] }}</td><td>{{ c[1] }}</td>
+                        <td><div class="acciones">
+                            <button class="btn-warning" onclick="editCurso({{ c[0] }},'{{ c[1] }}')">Editar</button>
+                            <a class="btn-danger-sm" href="/eliminar_curso/{{ c[0] }}" onclick="return confirm('¿Eliminar este curso?')">Eliminar</a>
+                        </div></td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+
+            <!-- PARALELOS -->
+            <div class="card">
+                <h2>➕ Añadir Paralelo</h2>
+                <form method="POST" action="/crear_paralelo">
+                    <div class="form-row">
+                        <input name="nombre_paralelo" placeholder="Ej: A" required>
+                        <button type="submit" class="btn btn-primary">Añadir</button>
+                    </div>
+                </form>
+            </div>
+            <div class="card">
+                <h2>📋 Paralelos</h2>
+                <div class="edit-panel" id="edit-panel-paralelo">
+                    <h3>✏️ Editar Paralelo</h3>
+                    <form method="POST" id="form-edit-paralelo">
+                        <div class="form-row">
+                            <input name="nombre_paralelo" id="epa-nombre" placeholder="Nombre" required>
+                            <button type="submit" class="btn btn-primary">Guardar</button>
+                            <button type="button" class="btn btn-cancel" onclick="cerrarEdit('edit-panel-paralelo')">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+                <table>
+                    <tr><th>ID</th><th>Paralelo</th><th>Acciones</th></tr>
+                    {% for p in paralelos %}
+                    <tr>
+                        <td>{{ p[0] }}</td><td>{{ p[1] }}</td>
+                        <td><div class="acciones">
+                            <button class="btn-warning" onclick="editParalelo({{ p[0] }},'{{ p[1] }}')">Editar</button>
+                            <a class="btn-danger-sm" href="/eliminar_paralelo/{{ p[0] }}" onclick="return confirm('¿Eliminar este paralelo?')">Eliminar</a>
+                        </div></td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<script src="{{ url_for('static', filename='Scripts/admin.js') }}"></script>
+
+</body>
+</html>
